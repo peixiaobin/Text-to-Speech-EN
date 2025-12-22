@@ -1,17 +1,95 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8"> <!-- 添加此行以指定字符编码 -->
-<title>Edge浏览器TTS</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>移动设备优化TTS播放器</title>
 <style>
-#text-container {
-    font-size: 14px;
-    max-width: 2000px;
+/* 全局样式：让页面在手机上更好看 */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
 }
+
+/* 显示区域优化 */
+#text-container {
+    background-color: white;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px; 
+    min-height: 100px;   
+    
+    font-size: 18px;     
+    line-height: 1.6;
+    
+    /* 核心功能：自动换行 */
+    white-space: pre-wrap;       
+    word-wrap: break-word;       
+    overflow-wrap: break-word;
+}
+
+/* 输入框优化 */
 #input-box {
     width: 100%;
-    height: 100px;
-    resize: vertical;
+    height: 150px;
+    font-size: 16px; 
+    padding: 10px;
+    box-sizing: border-box; 
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+
+/* 按钮和选项区域 */
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* 两端对齐：选项在左，按钮在右 */
+    gap: 10px;
+}
+
+/* 新增：将所有选项包裹起来，保证它们靠左排列 */
+.options-group {
+    display: flex;
+    gap: 15px; /* 两个选项之间的间距 */
+    flex-wrap: wrap; /* 屏幕极小时允许换行 */
+}
+
+/* 按钮组，确保按钮紧凑排列 */
+.btn-group {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    padding: 10px 25px;
+    font-size: 16px;
+    background-color: #007AFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    flex-shrink: 0; /* 防止按钮被挤压变形 */
+}
+
+/* 粘贴按钮样式，使用绿色区分 */
+.btn-paste {
+    background-color: #34C759;
+}
+
+.checkbox-wrapper {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    cursor: pointer; /* 增加鼠标手势 */
+}
+.checkbox-wrapper input {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
 }
 </style>
 </head>
@@ -20,15 +98,75 @@
 <div id="text-container">请在输入框写入文字</div>
 
 <form>
-<textarea id="input-box"></textarea>
-<button type="button" onclick="replaceText()">提交</button>
+    <textarea id="input-box" placeholder="在此输入文字..."></textarea>
+    
+    <div class="controls">
+        <div class="options-group">
+            <label class="checkbox-wrapper">
+                <input type="checkbox" id="remove-space-option"> 去除空格
+            </label>
+            <label class="checkbox-wrapper">
+                <input type="checkbox" id="remove-symbol-option"> 去除符号
+            </label>
+        </div>
+        
+        <div class="btn-group">
+            <button type="button" class="btn-paste" onclick="pasteText()">粘贴</button>
+            <button type="button" onclick="replaceText()">提交</button>
+        </div>
+    </div>
 </form>
 
 <script>
 function replaceText() {
-    var inputText = document.getElementById("input-box").value;
+    // 获取输入框元素
+    var inputBox = document.getElementById("input-box");
+    // 获取输入内容
+    var inputText = inputBox.value;
+    
+    // 1. 获取是否勾选去空格
+    var needRemoveSpace = document.getElementById("remove-space-option").checked;
+    
+    // 2. 获取是否勾选去符号
+    var needRemoveSymbol = document.getElementById("remove-symbol-option").checked;
+    
+    // --- 处理逻辑 ---
+
+    // 逻辑 A: 去除空格 (保留换行符 \n，只去空格和Tab)
+    if (needRemoveSpace) {
+        inputText = inputText.replace(/[ \t]+/g, '');
+    }
+
+    // 逻辑 B: 去除符号 (保留汉字、字母、数字、空格、换行，以及 , . ， 。)
+    if (needRemoveSymbol) {
+        inputText = inputText.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s,.\u3002\uff0c]/g, '');
+    }
+
+    // --- 核心逻辑保留 ---
+    // 使用 innerHTML 直接替换，这和你原文件的逻辑一致，
+    // 这样 Edge 浏览器能识别到内容变化并进行朗读。
     document.getElementById("text-container").innerHTML = inputText;
-    document.getElementById("input-box").value = "";
+    
+    // 清空输入框
+    inputBox.value = "";
+}
+
+async function pasteText() {
+    try {
+        // 读取剪贴板内容
+        const text = await navigator.clipboard.readText();
+        
+        // 1. 将剪贴板内容填入输入框
+        document.getElementById("input-box").value = text;
+        
+        // 2. 直接调用提交逻辑 (复用 replaceText 函数)
+        // 这样可以确保"去空格"和"去星号"的逻辑被正确应用
+        replaceText();
+        
+    } catch (err) {
+        console.error('Failed to read clipboard: ', err);
+        alert('无法读取剪贴板。请确保浏览器已授权访问剪贴板，或者手动粘贴到输入框。');
+    }
 }
 </script>
 
